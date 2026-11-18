@@ -5,15 +5,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
-    <meta name="description" content="Explore a working advocacy demonstration from Lacchi Software, then choose from five additional visual styles." />
+    <meta
+      name="description"
+      content="Explore a working advocacy demonstration from Lacchi Software, then choose from five additional visual styles."
+    />
     <title>Advocacy demonstration — Lacchi Software</title>
-    <link rel="stylesheet" href="gallery.css?v=baad927eb365" />
-    <script src="gallery.js?v=baad927eb365" type="module"></script>
+    <link rel="stylesheet" href="gallery.css?v=bea1cb475b42" />
+    <script src="gallery.js?v=bea1cb475b42" type="module"></script>
   </head>
   <body>
     <a class="skip" href="#demo">Skip to the working demo</a>
     <header class="catalog-header">
-      <a class="catalog-brand" href="./" aria-label="Lacchi Software advocacy demonstration">Lacchi <span>Advocacy demonstration</span></a>
+      <a
+        class="catalog-brand"
+        href="./"
+        aria-label="Lacchi Software advocacy demonstration"
+        >Lacchi <span>Advocacy demonstration</span></a
+      >
       <nav aria-label="Demonstration resources">
         <a href="#/about" data-route="/about">Demo guide</a>
         <a href="#/code" data-route="/code">View code</a>
@@ -25,22 +33,85 @@
           <p class="catalog-context">A working example by Lacchi Software</p>
           <h1 id="style-heading">One demo. Pick your style.</h1>
         </div>
-        <p>Start with Original to explore story entry, sharing choices, organizer review and export. Then try a different style of the same working demo.</p>
+        <div class="intro-task">
+          <p>
+            Try story entry, sharing choices, organizer review and export. The
+            same working flow, in six visual directions.
+          </p>
+          <div class="intro-actions">
+            <a class="start-demo" href="#/share" data-route="/share"
+              >Try the working demo <span aria-hidden="true">→</span></a
+            ><button id="compare-styles" type="button">Compare styles</button>
+          </div>
+          <p class="intro-boundary">
+            Fictional examples only. No account or real document needed.
+          </p>
+        </div>
       </section>
-      <div id="choices" class="choices" role="group" aria-label="Pick your style"><p role="status">Loading the style choices…</p></div>
-      <p class="style-note">These are quick design studies. We can develop any direction further around your audience and brand.</p>
-      <div class="demo-heading">
-        <div><h2 id="selected-name">Original</h2><p id="selected-description">The core workflow. Start here.</p></div>
-        <button id="motion" type="button" hidden aria-pressed="false">Pause motion</button>
-        <p id="style-status" class="sr-only" role="status" aria-live="polite"></p>
+      <div
+        id="choices"
+        class="choices"
+        role="group"
+        aria-label="Pick your style"
+      >
+        <p role="status">Loading the style choices…</p>
       </div>
-      <section class="demo-surface" id="demo" tabindex="-1" aria-label="Working advocacy demonstration" aria-busy="true">
+      <p class="style-note">
+        These are quick design studies. We can develop any direction further
+        around your audience and brand.
+      </p>
+      <div class="demo-heading">
+        <div>
+          <h2 id="selected-name">Original</h2>
+          <p id="selected-description">The core workflow. Start here.</p>
+        </div>
+        <button id="motion" type="button" hidden aria-pressed="false">
+          Pause motion
+        </button>
+        <p
+          id="style-status"
+          class="sr-only"
+          role="status"
+          aria-live="polite"
+        ></p>
+      </div>
+      <section
+        class="demo-surface"
+        id="demo"
+        tabindex="-1"
+        aria-label="Working advocacy demonstration"
+        aria-busy="true"
+      >
         <p id="demo-loading" role="status">Loading the working demo…</p>
-        <iframe id="demo-frame" title="Original advocacy demonstration" src="about:blank" allow="clipboard-write 'self'" scrolling="no"></iframe>
-        <p id="demo-error" role="alert" hidden>The demo is taking longer to load. <button id="retry" type="button">Try again</button></p>
+        <iframe
+          id="demo-frame"
+          title="Original advocacy demonstration"
+          src="about:blank"
+          allow="clipboard-write 'self'"
+          scrolling="no"
+        ></iframe>
+        <p id="demo-error" role="alert" hidden>
+          The demo is taking longer to load.
+          <button id="retry" type="button">Try again</button>
+        </p>
       </section>
-      <noscript><p>The working demo needs JavaScript. Contact <a href="mailto:joseph@lacchisoftware.com">joseph@lacchisoftware.com</a> for a walkthrough.</p></noscript>
+      <noscript
+        ><p>
+          The working demo needs JavaScript. Contact
+          <a href="mailto:joseph@lacchisoftware.com"
+            >joseph@lacchisoftware.com</a
+          >
+          for a walkthrough.
+        </p></noscript
+      >
     </main>
-    <footer class="catalog-footer"><span>Fictional information. Saved only in this browser. No external delivery.</span><a href="#/code" data-route="/code">Inspect selected source files and tests</a></footer>
+    <footer class="catalog-footer">
+      <span
+        >Fictional information. Browser-only workspace. No external
+        delivery.</span
+      ><a href="#/code" data-route="/code"
+        >Inspect selected source files and tests</a
+      >
+    </footer>
   </body>
 </html>

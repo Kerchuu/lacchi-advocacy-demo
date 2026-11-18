@@ -1,10 +1,30 @@
 const designs = [
-  { id: "original", name: "Original", description: "The core workflow. Start here." },
-  { id: "blueprint", name: "Blueprint", description: "A drafting board with document layers" },
-  { id: "garden", name: "Common Ground", description: "An illustrated neighborhood" },
-  { id: "press", name: "Civic Press", description: "Bold typography and animated paper" },
+  {
+    id: "original",
+    name: "Original",
+    description: "The core workflow. Start here.",
+  },
+  {
+    id: "blueprint",
+    name: "Blueprint",
+    description: "A drafting board with document layers",
+  },
+  {
+    id: "garden",
+    name: "Common Ground",
+    description: "An illustrated neighborhood",
+  },
+  {
+    id: "press",
+    name: "Civic Press",
+    description: "Bold typography and animated paper",
+  },
   { id: "night", name: "After Hours", description: "A midnight energy grid" },
-  { id: "parade", name: "Paper Parade", description: "Expressive graphics and paper characters" },
+  {
+    id: "parade",
+    name: "Paper Parade",
+    description: "Expressive graphics and paper characters",
+  },
 ];
 const frame = document.querySelector("#demo-frame");
 const basePath = new URL(".", import.meta.url).pathname;
@@ -17,30 +37,49 @@ const error = document.querySelector("#demo-error");
 let selected = designs[0];
 let route = readRoute();
 let requestedRoute = null;
+let focusRequestedRoute = null;
 let paused = false;
 let ready = false;
 let loadingTimer;
 let firstMessage = true;
 
 function validRoute(value) {
-  return typeof value === "string" && /^\/(?:share|preview|about|code|organizer(?:\/[\w-]+)?|packet\/[\w-]+)?$/.test(value);
+  return (
+    typeof value === "string" &&
+    /^\/(?:share|preview|about|code|organizer(?:\/[\w-]+)?|packet\/[\w-]+)?$/.test(
+      value,
+    )
+  );
 }
 
 function readRoute(address = location.href) {
   // Retain old direct links while presenting one public demonstration address.
   const url = new URL(address, location.href);
-  const path = url.pathname.startsWith(basePath) ? `/${url.pathname.slice(basePath.length)}` : "/";
+  const path = url.pathname.startsWith(basePath)
+    ? `/${url.pathname.slice(basePath.length)}`
+    : "/";
   const value = url.hash.replace(/^#/, "") || path.replace(/\/$/, "") || "/";
   const normalized = value.startsWith("/") ? value : `/${value}`;
   return validRoute(normalized) ? normalized : "/";
 }
 
 function rememberRoute(value) {
-  history.replaceState(null, "", value === "/" ? basePath : `${basePath}#${value}`);
+  history.replaceState(
+    null,
+    "",
+    value === "/" ? basePath : `${basePath}#${value}`,
+  );
 }
 
 function showDemo() {
   surface.scrollIntoView({ block: "start", behavior: "instant" });
+}
+
+function focusDemoContent() {
+  // A wrapper action opens a new task inside the frame. Continue its keyboard
+  // order there instead of leaving focus on a now off-screen launcher.
+  frame.contentDocument?.getElementById("main")?.focus({ preventScroll: true });
+  focusRequestedRoute = null;
 }
 
 function send(command) {
@@ -51,7 +90,9 @@ function currentFrameRoute() {
   try {
     const value = frame.contentWindow.location.hash.slice(1);
     return validRoute(value) ? value : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function frameSource() {
@@ -60,6 +101,7 @@ function frameSource() {
 
 function navigateRoute(next, focus = false) {
   const current = currentFrameRoute();
+  focusRequestedRoute = focus ? next : null;
   // Keep the latest host intent until the frame acknowledges it. An older
   // resize report must not replace a newer navigation or style-switch request.
   requestedRoute = current === next ? null : next;
@@ -68,7 +110,10 @@ function navigateRoute(next, focus = false) {
     if (current === next) {
       route = next;
       rememberRoute(next);
-      if (focus) showDemo();
+      if (focus) {
+        showDemo();
+        focusDemoContent();
+      }
     }
   } else {
     route = next;
@@ -84,22 +129,32 @@ function startLoading() {
   error.hidden = true;
   surface.setAttribute("aria-busy", "true");
   clearTimeout(loadingTimer);
-  loadingTimer = setTimeout(() => { error.hidden = false; loading.hidden = true; }, 15000);
+  loadingTimer = setTimeout(() => {
+    error.hidden = false;
+    loading.hidden = true;
+  }, 15000);
 }
 
 function renderSelection(design) {
   selected = design;
   for (const button of choices.querySelectorAll("button")) {
-    button.setAttribute("aria-pressed", String(button.dataset.design === design.id));
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.design === design.id),
+    );
   }
   document.querySelector("#selected-name").textContent = design.name;
-  document.querySelector("#selected-description").textContent = design.description;
-  document.querySelector("#style-status").textContent = `${design.name} selected. Your sample work is kept when you switch styles.`;
+  document.querySelector("#selected-description").textContent =
+    design.description;
+  document.querySelector("#style-status").textContent =
+    `${design.name} selected. Saved sample work is shared by the styles in this browser.`;
   frame.title = `${design.name} advocacy demonstration`;
   motion.hidden = design.id === "original";
 }
 
 function choose(design) {
+  // Choosing an appearance keeps focus on the picker, even if a task was loading.
+  focusRequestedRoute = null;
   route = requestedRoute || (ready && currentFrameRoute()) || route;
   renderSelection(design);
   startLoading();
@@ -131,16 +186,28 @@ for (const design of designs) {
     caption.append(note);
   }
   button.append(thumbnail, caption);
-  button.addEventListener("click", () => { if (selected.id !== design.id) choose(design); });
+  button.addEventListener("click", () => {
+    if (selected.id !== design.id) choose(design);
+  });
   choices.append(button);
 }
 
 window.addEventListener("message", (event) => {
   // Only the active same-origin demo may resize this frame or report its route.
-  if (event.origin !== location.origin || event.source !== frame.contentWindow || event.data?.type !== "lacchi:frame") return;
+  if (
+    event.origin !== location.origin ||
+    event.source !== frame.contentWindow ||
+    event.data?.type !== "lacchi:frame"
+  )
+    return;
   const state = event.data;
   const activeDesign = designs.find((design) => design.id === state.design);
-  if (!activeDesign || frame.contentWindow.location.pathname.split("/").filter(Boolean).at(-1) !== state.design) return;
+  if (
+    !activeDesign ||
+    frame.contentWindow.location.pathname.split("/").filter(Boolean).at(-1) !==
+      state.design
+  )
+    return;
   if (!validRoute(state.route) || currentFrameRoute() !== state.route) return;
   if (requestedRoute && state.route !== requestedRoute) return;
   if (state.design !== selected.id) {
@@ -149,7 +216,13 @@ window.addEventListener("message", (event) => {
     if (!ready) return;
     renderSelection(activeDesign);
   }
-  if (!validRoute(state.route) || !Number.isFinite(state.height) || state.height < 100 || state.height > 50000) return;
+  if (
+    !validRoute(state.route) ||
+    !Number.isFinite(state.height) ||
+    state.height < 100 ||
+    state.height > 50000
+  )
+    return;
   requestedRoute = null;
   const changedRoute = route !== state.route;
   route = state.route;
@@ -165,8 +238,15 @@ window.addEventListener("message", (event) => {
   }
   motion.disabled = !!state.reduced;
   motion.setAttribute("aria-pressed", String(state.paused));
-  motion.textContent = state.reduced ? "Motion reduced" : state.paused ? "Play motion" : "Pause motion";
-  if (changedRoute || (firstMessage && route !== "/")) showDemo();
+  motion.textContent = state.reduced
+    ? "Motion reduced"
+    : state.paused
+      ? "Play motion"
+      : "Pause motion";
+  const focusRequested = focusRequestedRoute === route;
+  if (changedRoute || (firstMessage && route !== "/") || focusRequested)
+    showDemo();
+  if (focusRequested) focusDemoContent();
   firstMessage = false;
 });
 
@@ -185,9 +265,19 @@ motion.addEventListener("click", () => {
   paused = motion.getAttribute("aria-pressed") !== "true";
   send({ type: "lacchi:motion", paused });
 });
-document.querySelector("#retry").addEventListener("click", () => choose(selected));
+document
+  .querySelector("#retry")
+  .addEventListener("click", () => choose(selected));
+document.querySelector("#compare-styles").addEventListener("click", () => {
+  focusRequestedRoute = null;
+  choices.scrollIntoView({ block: "center", behavior: "instant" });
+  choices
+    .querySelector('[aria-pressed="true"]')
+    ?.focus({ preventScroll: true });
+});
 document.querySelector(".skip").addEventListener("click", (event) => {
   event.preventDefault();
+  focusRequestedRoute = null;
   showDemo();
   surface.focus({ preventScroll: true });
 });
