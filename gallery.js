@@ -16,6 +16,7 @@ const loading = document.querySelector("#demo-loading");
 const error = document.querySelector("#demo-error");
 let selected = designs[0];
 let route = readRoute();
+let requestedRoute = null;
 let paused = false;
 let ready = false;
 let loadingTimer;
@@ -25,10 +26,11 @@ function validRoute(value) {
   return typeof value === "string" && /^\/(?:share|preview|about|code|organizer(?:\/[\w-]+)?|packet\/[\w-]+)?$/.test(value);
 }
 
-function readRoute() {
+function readRoute(address = location.href) {
   // Retain old direct links while presenting one public demonstration address.
-  const path = location.pathname.startsWith(basePath) ? `/${location.pathname.slice(basePath.length)}` : "/";
-  const value = location.hash.replace(/^#/, "") || path.replace(/\/$/, "") || "/";
+  const url = new URL(address, location.href);
+  const path = url.pathname.startsWith(basePath) ? `/${url.pathname.slice(basePath.length)}` : "/";
+  const value = url.hash.replace(/^#/, "") || path.replace(/\/$/, "") || "/";
   const normalized = value.startsWith("/") ? value : `/${value}`;
   return validRoute(normalized) ? normalized : "/";
 }
@@ -43,6 +45,36 @@ function showDemo() {
 
 function send(command) {
   if (ready) frame.contentWindow.postMessage(command, location.origin);
+}
+
+function currentFrameRoute() {
+  try {
+    const value = frame.contentWindow.location.hash.slice(1);
+    return validRoute(value) ? value : null;
+  } catch { return null; }
+}
+
+function frameSource() {
+  return `${selected.id}/?embedded=1&v=${revision}#${route}`;
+}
+
+function navigateRoute(next, focus = false) {
+  const current = currentFrameRoute();
+  // Keep the latest host intent until the frame acknowledges it. An older
+  // resize report must not replace a newer navigation or style-switch request.
+  requestedRoute = current === next ? null : next;
+  if (ready) {
+    send({ type: "lacchi:navigate", route: next });
+    if (current === next) {
+      route = next;
+      rememberRoute(next);
+      if (focus) showDemo();
+    }
+  } else {
+    route = next;
+    startLoading();
+    frame.src = frameSource();
+  }
 }
 
 function startLoading() {
@@ -68,9 +100,10 @@ function renderSelection(design) {
 }
 
 function choose(design) {
+  route = requestedRoute || (ready && currentFrameRoute()) || route;
   renderSelection(design);
   startLoading();
-  frame.src = `${design.id}/?embedded=1&v=${revision}#${route}`;
+  frame.src = frameSource();
 }
 
 choices.replaceChildren();
@@ -108,6 +141,8 @@ window.addEventListener("message", (event) => {
   const state = event.data;
   const activeDesign = designs.find((design) => design.id === state.design);
   if (!activeDesign || frame.contentWindow.location.pathname.split("/").filter(Boolean).at(-1) !== state.design) return;
+  if (!validRoute(state.route) || currentFrameRoute() !== state.route) return;
+  if (requestedRoute && state.route !== requestedRoute) return;
   if (state.design !== selected.id) {
     // Back/Forward can restore an earlier frame document. Reflect that actual
     // style instead of leaving the picker and measured height out of sync.
@@ -115,9 +150,10 @@ window.addEventListener("message", (event) => {
     renderSelection(activeDesign);
   }
   if (!validRoute(state.route) || !Number.isFinite(state.height) || state.height < 100 || state.height > 50000) return;
+  requestedRoute = null;
   const changedRoute = route !== state.route;
   route = state.route;
-  rememberRoute(route);
+  if (changedRoute || firstMessage) rememberRoute(route);
   frame.style.height = `${Math.ceil(state.height)}px`;
   if (!ready) {
     ready = true;
@@ -137,15 +173,13 @@ window.addEventListener("message", (event) => {
 for (const link of document.querySelectorAll("[data-route]")) {
   link.addEventListener("click", (event) => {
     event.preventDefault();
-    const next = link.dataset.route;
-    if (next === route) showDemo();
-    else if (ready) send({ type: "lacchi:navigate", route: next });
-    else { route = next; frame.src = `${selected.id}/?embedded=1&v=${revision}#${route}`; }
+    navigateRoute(link.dataset.route, true);
   });
 }
-window.addEventListener("hashchange", () => {
-  const next = readRoute();
-  if (next !== route) send({ type: "lacchi:navigate", route: next });
+window.addEventListener("hashchange", (event) => {
+  // newURL preserves the actual intent even if a queued frame message has
+  // already changed the visible address by the time this event is delivered.
+  navigateRoute(readRoute(event.newURL));
 });
 motion.addEventListener("click", () => {
   paused = motion.getAttribute("aria-pressed") !== "true";
@@ -159,4 +193,4 @@ document.querySelector(".skip").addEventListener("click", (event) => {
 });
 
 startLoading();
-frame.src = `${selected.id}/?embedded=1&v=${revision}#${route}`;
+frame.src = frameSource();
