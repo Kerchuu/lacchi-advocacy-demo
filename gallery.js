@@ -1,13 +1,14 @@
 const designs = [
   { id: "original", name: "Original", description: "The core workflow. Start here." },
+  { id: "blueprint", name: "Blueprint", description: "A drafting board with document layers" },
+  { id: "garden", name: "Common Ground", description: "An illustrated neighborhood" },
   { id: "press", name: "Civic Press", description: "Bold typography and animated paper" },
   { id: "night", name: "After Hours", description: "A midnight energy grid" },
-  { id: "garden", name: "Common Ground", description: "An illustrated neighborhood" },
-  { id: "blueprint", name: "Blueprint", description: "A drafting board with document layers" },
   { id: "parade", name: "Paper Parade", description: "Expressive graphics and paper characters" },
 ];
 const frame = document.querySelector("#demo-frame");
 const basePath = new URL(".", import.meta.url).pathname;
+const revision = new URL(import.meta.url).searchParams.get("v") || "local";
 const surface = document.querySelector("#demo");
 const choices = document.querySelector("#choices");
 const motion = document.querySelector("#motion");
@@ -69,7 +70,7 @@ function renderSelection(design) {
 function choose(design) {
   renderSelection(design);
   startLoading();
-  frame.src = `${design.id}/?embedded=1#${route}`;
+  frame.src = `${design.id}/?embedded=1&v=${revision}#${route}`;
 }
 
 choices.replaceChildren();
@@ -80,7 +81,7 @@ for (const design of designs) {
   button.dataset.design = design.id;
   button.setAttribute("aria-pressed", String(design.id === "original"));
   const thumbnail = document.createElement("img");
-  thumbnail.src = `thumbnails/${design.id}.png`;
+  thumbnail.src = `thumbnails/${design.id}.png?v=${revision}`;
   thumbnail.alt = "";
   thumbnail.width = 1440;
   thumbnail.height = 1000;
@@ -139,7 +140,7 @@ for (const link of document.querySelectorAll("[data-route]")) {
     const next = link.dataset.route;
     if (next === route) showDemo();
     else if (ready) send({ type: "lacchi:navigate", route: next });
-    else { route = next; frame.src = `${selected.id}/?embedded=1#${route}`; }
+    else { route = next; frame.src = `${selected.id}/?embedded=1&v=${revision}#${route}`; }
   });
 }
 window.addEventListener("hashchange", () => {
@@ -158,4 +159,4 @@ document.querySelector(".skip").addEventListener("click", (event) => {
 });
 
 startLoading();
-frame.src = `${selected.id}/?embedded=1#${route}`;
+frame.src = `${selected.id}/?embedded=1&v=${revision}#${route}`;
