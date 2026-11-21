@@ -2,28 +2,27 @@ const designs = [
   {
     id: "original",
     name: "Original",
-    description: "The core workflow. Start here.",
+    description: "Story entry, sharing choices and review",
   },
   {
     id: "blueprint",
     name: "Blueprint",
-    description: "A drafting board with document layers",
+    description: "Original story, delivery copy and packet",
   },
   {
     id: "garden",
     name: "Common Ground",
-    description: "An illustrated neighborhood",
+    description: "A household’s note and its recipient copy",
   },
   {
     id: "press",
     name: "Civic Press",
-    description: "Bold typography and animated paper",
+    description: "A bill, a story and the choices behind it",
   },
-  { id: "night", name: "After Hours", description: "A midnight energy grid" },
   {
     id: "parade",
     name: "Paper Parade",
-    description: "Expressive graphics and paper characters",
+    description: "An illustrated story and its sharing choices",
   },
 ];
 const frame = document.querySelector("#demo-frame");
@@ -34,9 +33,12 @@ const choices = document.querySelector("#choices");
 const motion = document.querySelector("#motion");
 const loading = document.querySelector("#demo-loading");
 const error = document.querySelector("#demo-error");
-let selected = designs[0];
+const initialStyle = new URL(location.href).searchParams.get("style");
+let selected = designs.find((design) => design.id === initialStyle) || designs[0];
 let route = readRoute();
 let requestedRoute = null;
+let nextNavigationId = 0;
+let pendingNavigationId = null;
 let focusRequestedRoute = null;
 let paused = false;
 let ready = false;
@@ -64,11 +66,10 @@ function readRoute(address = location.href) {
 }
 
 function rememberRoute(value) {
-  history.replaceState(
-    null,
-    "",
-    value === "/" ? basePath : `${basePath}#${value}`,
-  );
+  const address = new URL(basePath, location.origin);
+  if (selected.id !== "original") address.searchParams.set("style", selected.id);
+  if (value !== "/") address.hash = value;
+  if (location.href !== address.href) history.replaceState(null, "", address);
 }
 
 function showDemo() {
@@ -100,21 +101,13 @@ function frameSource() {
 }
 
 function navigateRoute(next, focus = false) {
-  const current = currentFrameRoute();
   focusRequestedRoute = focus ? next : null;
-  // Keep the latest host intent until the frame acknowledges it. An older
-  // resize report must not replace a newer navigation or style-switch request.
-  requestedRoute = current === next ? null : next;
+  requestedRoute = next;
   if (ready) {
-    send({ type: "lacchi:navigate", route: next });
-    if (current === next) {
-      route = next;
-      rememberRoute(next);
-      if (focus) {
-        showDemo();
-        focusDemoContent();
-      }
-    }
+    // The frame may already show this URL while a different command is in transit.
+    // Wait for the latest command itself, even when two clicks target the same route.
+    pendingNavigationId = ++nextNavigationId;
+    send({ type: "lacchi:navigate", route: next, navigationId: pendingNavigationId });
   } else {
     route = next;
     startLoading();
@@ -124,12 +117,14 @@ function navigateRoute(next, focus = false) {
 
 function startLoading() {
   ready = false;
+  pendingNavigationId = null;
   firstMessage = true;
   loading.hidden = false;
   error.hidden = true;
   surface.setAttribute("aria-busy", "true");
   clearTimeout(loadingTimer);
   loadingTimer = setTimeout(() => {
+    surface.setAttribute("aria-busy", "false");
     error.hidden = false;
     loading.hidden = true;
   }, 15000);
@@ -167,7 +162,7 @@ for (const design of designs) {
   button.type = "button";
   button.className = "choice";
   button.dataset.design = design.id;
-  button.setAttribute("aria-pressed", String(design.id === "original"));
+  button.setAttribute("aria-pressed", String(design.id === selected.id));
   const thumbnail = document.createElement("img");
   thumbnail.src = `thumbnails/${design.id}.png?v=${revision}`;
   thumbnail.alt = "";
@@ -179,12 +174,6 @@ for (const design of designs) {
   label.className = "choice-name";
   label.textContent = design.name;
   caption.append(label);
-  if (design.id === "original") {
-    const note = document.createElement("span");
-    note.className = "choice-note";
-    note.textContent = "Start here";
-    caption.append(note);
-  }
   button.append(thumbnail, caption);
   button.addEventListener("click", () => {
     if (selected.id !== design.id) choose(design);
@@ -209,6 +198,7 @@ window.addEventListener("message", (event) => {
   )
     return;
   if (!validRoute(state.route) || currentFrameRoute() !== state.route) return;
+  if (pendingNavigationId !== null && state.navigationId !== pendingNavigationId) return;
   if (requestedRoute && state.route !== requestedRoute) return;
   if (state.design !== selected.id) {
     // Back/Forward can restore an earlier frame document. Reflect that actual
@@ -224,9 +214,11 @@ window.addEventListener("message", (event) => {
   )
     return;
   requestedRoute = null;
+  pendingNavigationId = null;
   const changedRoute = route !== state.route;
   route = state.route;
-  if (changedRoute || firstMessage) rememberRoute(route);
+  // History traversal can restore another style on the very same route.
+  rememberRoute(route);
   frame.style.height = `${Math.ceil(state.height)}px`;
   if (!ready) {
     ready = true;
@@ -268,13 +260,6 @@ motion.addEventListener("click", () => {
 document
   .querySelector("#retry")
   .addEventListener("click", () => choose(selected));
-document.querySelector("#compare-styles").addEventListener("click", () => {
-  focusRequestedRoute = null;
-  choices.scrollIntoView({ block: "center", behavior: "instant" });
-  choices
-    .querySelector('[aria-pressed="true"]')
-    ?.focus({ preventScroll: true });
-});
 document.querySelector(".skip").addEventListener("click", (event) => {
   event.preventDefault();
   focusRequestedRoute = null;
@@ -282,5 +267,6 @@ document.querySelector(".skip").addEventListener("click", (event) => {
   surface.focus({ preventScroll: true });
 });
 
+renderSelection(selected);
 startLoading();
 frame.src = frameSource();

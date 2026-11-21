@@ -1,6 +1,8 @@
 (() => {
   if (window.parent === window || !new URLSearchParams(location.search).has("embedded")) return;
 
+  document.documentElement.classList.add("is-embedded");
+
   // Let the host page own scrolling. Viewport-based minimums would otherwise
   // feed the frame's measured height back into its own layout indefinitely.
   const style = document.createElement("style");
@@ -14,6 +16,7 @@
   let pending = false;
   let observed;
   let previous = "";
+  let navigationId = null;
   const resize = new ResizeObserver(schedule);
 
   function schedule() {
@@ -36,6 +39,7 @@
       design: location.pathname.split("/").filter(Boolean).at(-1),
       height: Math.ceil(app.getBoundingClientRect().height),
       route: location.hash.slice(1) || "/",
+      navigationId,
       paused: document.documentElement.dataset.motion === "paused",
       reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
     };
@@ -50,7 +54,10 @@
     if (event.source !== window.parent || event.origin !== location.origin) return;
     const command = event.data;
     if (command?.type === "lacchi:navigate" && typeof command.route === "string" && /^\/(?:share|preview|about|code|organizer(?:\/[\w-]+)?|packet\/[\w-]+)?$/.test(command.route)) {
-      location.hash = command.route;
+      navigationId = command.navigationId;
+      if (location.hash !== "#" + command.route) location.hash = command.route;
+      // An unchanged hash emits no event. The parent still needs its acknowledgement.
+      schedule();
     }
     if (command?.type === "lacchi:motion" && typeof command.paused === "boolean") {
       const control = document.querySelector(".study-controls button");
